@@ -41,19 +41,15 @@ jobs:
       - name: "🚀 Build static site"
         run: pnpm run build
 
-      - name: "🔑 Install sshpass & setup SSH key"
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
-          mkdir -p ~/.ssh
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p ${{ secrets.VPS_PORT || '22' }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
-
-      - name: "📂 Deploy to VPS via rsync"
-        run: |
-          sshpass -p "${{ secrets.VPS_SSH_PASSPHRASE }}" \
-            rsync -avz --delete --no-perms --no-owner --no-group \
-              -e "ssh -p ${{ secrets.VPS_PORT || '22' }} -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-              dist/ \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_REMOTE_PATH }}/
+      - name: "📂 Deploy to VPS via scp"
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+          source: "dist/*"
+          target: ${{ secrets.VPS_REMOTE_PATH }}
+          strip_components: 1
+          rm: true
